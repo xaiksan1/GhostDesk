@@ -1,12 +1,23 @@
-# Dockerfile.dev — local dev image with exec_shell patched in
-# Layers on the published :latest — only recompiles the changed Python modules.
-# Build: docker build -f Dockerfile.dev -t ghostdesk:dev .
-# Run:   docker run -d --name ghostdesk -p 3000:3000 -p 6080:6080 ghostdesk:dev
+# syntax=docker/dockerfile:1
+# Dockerfile.dev — local dev image with exec_shell + browser-harness + CLI-Anything
+#
+# Build:
+#   ./scripts/build-dev.sh
+#
+# Or manually (requires buildx):
+#   docker buildx build \
+#     --build-context browser-harness=/home/ichigo/alexandria/browser-harness \
+#     --build-context cli-anything=/home/ichigo/alexandria/CLI-Anything \
+#     -f Dockerfile.dev -t ghostdesk:dev .
+#
+# Run:
+#   docker run -d --name ghostdesk -p 3000:3000 -p 6080:6080 ghostdesk:dev
 
 FROM ghcr.io/yv17labs/ghostdesk:latest
 
 USER root
 
+# ── exec_shell patch ─────────────────────────────────────────────────────────
 COPY src/ghostdesk/apps/__init__.py   /tmp/gd-patch/__init__.py
 COPY src/ghostdesk/apps/exec_shell.py /tmp/gd-patch/exec_shell.py
 
@@ -16,3 +27,30 @@ d = '/opt/ghostdesk/.venv/lib/python3.14/site-packages/ghostdesk/apps'; \
 [( py_compile.compile(f'/tmp/gd-patch/{n}.py', f'{d}/{n}.pyc', optimize=0), os.chmod(f'{d}/{n}.pyc', 0o444) ) for n in ['__init__', 'exec_shell']]; \
 print('patched:', os.listdir(d))" \
     && rm -rf /tmp/gd-patch
+
+# ── pip bootstrap (venv ships without pip) ───────────────────────────────────
+RUN /opt/ghostdesk/.venv/bin/python -c "\
+import urllib.request; \
+urllib.request.urlretrieve('https://bootstrap.pypa.io/get-pip.py', '/tmp/get-pip.py')" \
+    && /opt/ghostdesk/.venv/bin/python /tmp/get-pip.py --quiet --no-input \
+    && rm -f /tmp/get-pip.py
+
+# ── B2: browser-harness — CDP-based Firefox control ──────────────────────────
+COPY --from=browser-harness . /opt/tools/browser-harness/
+
+RUN /opt/ghostdesk/.venv/bin/pip install --quiet \
+    --no-warn-script-location \
+    -e /opt/tools/browser-harness/
+
+# ── B1: CLI-Anything — GUI app harness framework ─────────────────────────────
+COPY --from=cli-anything . /opt/tools/cli-anything/
+
+# Install shared deps used by all CLI-Anything harnesses
+RUN /opt/ghostdesk/.venv/bin/pip install --quiet \
+    --no-warn-script-location \
+    "click>=8.0.0" \
+    "requests>=2.28.0" \
+    "prompt-toolkit>=3.0.0"
+
+# Make venv bins reachable from exec_shell without full path
+ENV PATH="/opt/ghostdesk/.venv/bin:${PATH}"
