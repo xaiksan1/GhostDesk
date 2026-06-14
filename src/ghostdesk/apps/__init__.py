@@ -9,6 +9,7 @@ from ghostdesk.apps.app_launch import app_launch
 from ghostdesk.apps.app_list import app_list
 from ghostdesk.apps.app_running import app_running
 from ghostdesk.apps.app_status import app_status
+from ghostdesk.apps.exec_shell import exec_shell
 
 
 def register(mcp: FastMCP) -> None:
@@ -29,3 +30,7 @@ def register(mcp: FastMCP) -> None:
         annotations=ToolAnnotations(readOnlyHint=True),
         icons=GHOSTDESK_ICONS,
     )(app_status)
+    mcp.tool(
+        annotations=ToolAnnotations(destructiveHint=True),
+        icons=GHOSTDESK_ICONS,
+    )(exec_shell)

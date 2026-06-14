@@ -1,0 +1,18 @@
+# Dockerfile.dev — local dev image with exec_shell patched in
+# Layers on the published :latest — only recompiles the changed Python modules.
+# Build: docker build -f Dockerfile.dev -t ghostdesk:dev .
+# Run:   docker run -d --name ghostdesk -p 3000:3000 -p 6080:6080 ghostdesk:dev
+
+FROM ghcr.io/yv17labs/ghostdesk:latest
+
+USER root
+
+COPY src/ghostdesk/apps/__init__.py   /tmp/gd-patch/__init__.py
+COPY src/ghostdesk/apps/exec_shell.py /tmp/gd-patch/exec_shell.py
+
+RUN /opt/ghostdesk/.venv/bin/python -c "\
+import py_compile, os; \
+d = '/opt/ghostdesk/.venv/lib/python3.14/site-packages/ghostdesk/apps'; \
+[( py_compile.compile(f'/tmp/gd-patch/{n}.py', f'{d}/{n}.pyc', optimize=0), os.chmod(f'{d}/{n}.pyc', 0o444) ) for n in ['__init__', 'exec_shell']]; \
+print('patched:', os.listdir(d))" \
+    && rm -rf /tmp/gd-patch
