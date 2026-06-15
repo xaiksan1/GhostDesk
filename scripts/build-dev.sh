@@ -24,4 +24,8 @@ docker buildx build \
     "${BUILD_DIR}"
 
 echo "Done. To restart container:"
-echo "  docker rm -f ghostdesk && docker run -d --name ghostdesk -p 3000:3000 -p 6080:6080 ghostdesk:dev"
+echo "  docker rm -f ghostdesk && docker run -d --name ghostdesk \\"
+echo "    -p 3000:3000 -p 6080:6080 \\"
+echo "    --add-host=host.docker.internal:host-gateway \\"
+echo "    -e TIM_BURNER_URL=http://host.docker.internal:5050 \\"
+echo "    ghostdesk:dev"
