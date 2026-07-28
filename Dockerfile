@@ -41,6 +41,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # without touching $HOME.
 COPY docker/services/foot/foot.ini /etc/xdg/foot/foot.ini
 
+# :base is a separately published image (ghcr.io/yv17labs/ghostdesk:base,
+# built from docker/base/Dockerfile via its own pipeline) — this Dockerfile
+# never rebuilds it, so a fix to docker/services/mcp/run.sh in this repo
+# does not reach a running container by itself. Re-copy it here to
+# overwrite the copy baked into :base until :base is republished upstream.
+COPY --chmod=0755 docker/services/mcp/run.sh /usr/local/bin/mcp-run
+
 LABEL org.opencontainers.image.title="ghostdesk" \
       org.opencontainers.image.description="Ghostdesk distribution image — MCP-controlled desktop with Firefox, foot, mousepad and galculator" \
       org.opencontainers.image.version="${GHOSTDESK_VERSION}" \
