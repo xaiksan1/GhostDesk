@@ -12,6 +12,16 @@ if [ ! -x "${BIN}" ]; then
     exit 1
 fi
 
+# Some hosts auto-inject Docker-links-style service discovery vars
+# (e.g. Kubernetes sets "<SVC>_PORT=tcp://<ip>:<port>" for any Service
+# whose name happens to match one of our own env var names). That
+# collides with server.py's own GHOSTDESK_PORT, which expects a bare
+# integer. Drop it if it isn't one, so server.py falls back to its
+# built-in default (3000) instead of crash-looping on int(GHOSTDESK_PORT).
+case "${GHOSTDESK_PORT-}" in
+    '' | *[!0-9]*) unset GHOSTDESK_PORT ;;
+esac
+
 RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/1000}"
 TIMEOUT=30
 elapsed=0
