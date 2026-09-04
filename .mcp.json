@@ -3,6 +3,13 @@
     "ghostdesk": {
       "type": "http",
       "url": "http://localhost:3000/mcp"
+    },
+    "chrome-devtools": {
+      "command": "node",
+      "args": [
+        "/home/ichigo/alexandria/chrome-devtools-mcp/build/src/index.js",
+        "--no-usage-statistics"
+      ]
     }
   }
 }
